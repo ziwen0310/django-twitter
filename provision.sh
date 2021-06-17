@@ -48,8 +48,10 @@ sudo mysql -u root << EOF
 EOF
 # fi
 
-# superuser名字 USER="admin"
-# superuser密码 PASS="admin"
+# superuser名字
+USER="admin"
+# superuser密码
+PASS="admin"
 # superuser邮箱
 MAIL="admin@twitter.com"
 script="
