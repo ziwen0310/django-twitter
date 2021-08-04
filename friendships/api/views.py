@@ -1,14 +1,16 @@
+from django.contrib.auth.models import User
+from friendships.api.paginations import FriendshipPagination
+from friendships.api.serializers import (
+    FollowerSerializer,
+    FollowingSerializer,
+    FriendshipSerializerForCreate,
+)
+from friendships.models import Friendship
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
-from friendships.models import Friendship
-from friendships.api.serializers import (
-    FollowingSerializer,
-    FollowerSerializer,
-    FriendshipSerializerForCreate,
-)
-from django.contrib.auth.models import User
+
 
 class FriendshipViewSet(viewsets.GenericViewSet):
     # 我们希望 POST /api/friendship/1/follow 是去 follow user_id=1 的用户
@@ -17,32 +19,24 @@ class FriendshipViewSet(viewsets.GenericViewSet):
     # 因为 detail=True 的 actions 会默认先去调用 get_object() 也就是
     # queryset.filter(pk=1) 查询一下这个 object 在不在
     queryset = User.objects.all()
-    serializer_class = FriendshipSerializerForCreate
+    # 一般来说，不同的 views 所需要的 pagination 规则肯定是不同的，因此一般都需要自定义
+    pagination_class = FriendshipPagination
 
-    def get_permissions(self):
-        if self.action == 'followers' or self.action == 'followings':
-            return [AllowAny()]
-        return [IsAuthenticated()]
-
-    @action(methods=['GET'], detail=True)
+    @action(methods=['GET'], detail=True, permission_classes=[AllowAny])
     def followers(self, request, pk):
         friendships = Friendship.objects.filter(to_user_id=pk).order_by('-created_at')
-        serializer = FollowerSerializer(friendships, many=True)
-        return Response(
-            {'followers': serializer.data},
-            status=status.HTTP_200_OK,
-        )
+        page = self.paginate_queryset(friendships)
+        serializer = FollowerSerializer(page, many=True, context={'request': request})
+        return self.get_paginated_response(serializer.data)
 
-    @action(methods=['GET'], detail=True)
+    @action(methods=['GET'], detail=True, permission_classes=[AllowAny])
     def followings(self, request, pk):
         friendships = Friendship.objects.filter(from_user_id=pk).order_by('-created_at')
-        serializer = FollowingSerializer(friendships, many=True)
-        return Response(
-            {'followings': serializer.data},
-            status=status.HTTP_200_OK,
-        )
+        page = self.paginate_queryset(friendships)
+        serializer = FollowingSerializer(page, many=True, context={'request': request})
+        return self.get_paginated_response(serializer.data)
 
-    @action(methods=['POST'], detail=True)
+    @action(methods=['POST'], detail=True, permission_classes=[IsAuthenticated])
     def follow(self, request, pk):
         # 特殊判断重复 follow 的情况（比如前端猛点好多少次 follow)
         # 静默处理，不报错，因为这类重复操作因为网络延迟的原因会比较多，没必要当做错误处理
@@ -63,7 +57,7 @@ class FriendshipViewSet(viewsets.GenericViewSet):
         serializer.save()
         return Response({'success': True}, status=status.HTTP_201_CREATED)
 
-    @action(methods=['POST'], detail=True)
+    @action(methods=['POST'], detail=True, permission_classes=[IsAuthenticated])
     def unfollow(self, request, pk):
         # 注意 pk 的类型是 str，所以要做类型转换
         if request.user.id == int(pk):
@@ -83,8 +77,3 @@ class FriendshipViewSet(viewsets.GenericViewSet):
             to_user=pk,
         ).delete()
         return Response({'success': True, 'deleted': deleted})
-
-    # 另一种实现查看follower和following的方式是通过改写list方法实现，类似tweet，通过api/friendship/?to_user_id=1实现
-    def list(self,request):
-        return Response({'message':'This is friendship home page.'})
-
