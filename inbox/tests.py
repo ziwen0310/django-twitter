@@ -6,6 +6,7 @@ from notifications.models import Notification
 class NotificationServiceTests(TestCase):
 
     def setUp(self):
+        self.clear_cache()
         self.linghu = self.create_user('linghu')
         self.dongxie = self.create_user('dongxie')
         self.linghu_tweet = self.create_tweet(self.linghu)
@@ -31,4 +32,3 @@ class NotificationServiceTests(TestCase):
         like = self.create_comment(self.dongxie, self.linghu_tweet)
         NotificationService.send_comment_notification(like)
         self.assertEqual(Notification.objects.count(), 1)
-

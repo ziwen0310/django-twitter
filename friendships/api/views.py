@@ -6,6 +6,7 @@ from friendships.api.serializers import (
     FriendshipSerializerForCreate,
 )
 from friendships.models import Friendship
+from friendships.services import FriendshipService
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, AllowAny
