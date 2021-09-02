@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from django.db import models
 from django.db.models.signals import post_save, pre_delete
 from friendships.listeners import friendship_changed
-from utils.memcached_helper import MemcachedHelper
+from utils.memcashed_helper import MemcachedHelper
 
 
 class Friendship(models.Model):
